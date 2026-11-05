@@ -1,0 +1,4 @@
+﻿voting,metric,k,selected_within_voting,n_train,n_test,accuracy,precision_macro,recall_macro,f1_macro
+uniform_nearest,euclidean,5,False,50000,10000,0.3556,0.4366914845819023,0.3556,0.34516625588220806
+uniform_nearest,manhattan,5,True,50000,10000,0.3921,0.4559879093037754,0.3921,0.38903556014271384
+uniform_nearest,cosine,5,False,50000,10000,0.3797,0.43316688850454055,0.3797,0.3721610827751043

@@ -1,0 +1,2 @@
+﻿voting,metric,k,cv_accuracy,cv_accuracy_std,accuracy,precision_macro,recall_macro,f1_macro
+uniform_nearest,manhattan,5,0.37852,0.005059347784052783,0.3921,0.4559879093037754,0.3921,0.38903556014271384

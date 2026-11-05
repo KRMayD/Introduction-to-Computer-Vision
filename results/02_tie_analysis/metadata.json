@@ -1,0 +1,12 @@
+{
+  "source_results": "/home/msko20702/CV/results/full_20261104_150743",
+  "diagnostic": "Manhattan CV-only voting tie analysis",
+  "original_tiebreak": "smallest class ID",
+  "alternative_tiebreak": "closest neighbor belonging to a tied winning class",
+  "original_predictions_reproduced": true,
+  "official_test_used": false,
+  "n_queries": 50000,
+  "device": "cuda:0",
+  "device_name": "NVIDIA RTX A5000",
+  "elapsed_seconds": 37.77809084899491
+}

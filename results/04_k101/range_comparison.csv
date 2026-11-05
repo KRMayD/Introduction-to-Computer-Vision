@@ -1,0 +1,4 @@
+﻿metric,previous_k,previous_cv_accuracy,previous_test_accuracy,new_k,new_cv_accuracy,new_test_accuracy
+euclidean,5,0.34902,0.3556,5,0.34902,0.3556
+manhattan,5,0.37852,0.3921,5,0.37852,0.3921
+cosine,5,0.37083999999999995,0.3797,5,0.37083999999999995,0.3797

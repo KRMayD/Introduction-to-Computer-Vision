@@ -1,0 +1,23 @@
+# Dataset archives and extracted CIFAR data
+/data/*
+!/data/README.md
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+cifar-10-batches-py/
+# Regenerated experiments and array caches
+/runs/
+*.npz
+*.npy
+*.log
+# Python, environments and plot caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mplconfig/
+.venv/
+venv/
+.env
+.ipynb_checkpoints/
+.DS_Store

@@ -1,0 +1,4 @@
+﻿voting,metric,k,selected_within_voting,n_train,n_test,accuracy,precision_macro,recall_macro,f1_macro
+distance_weighted,euclidean,5,False,50000,10000,0.3567,0.43848004563385323,0.3567,0.34655690131002953
+distance_weighted,manhattan,5,True,50000,10000,0.395,0.4592447879188285,0.395,0.39224583413861025
+distance_weighted,cosine,5,False,50000,10000,0.3864,0.4398434559001899,0.3864,0.379526213000965

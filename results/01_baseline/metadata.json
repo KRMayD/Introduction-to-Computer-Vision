@@ -1,0 +1,118 @@
+{
+  "archive": "/home/msko20702/CV/cifar-10-python.tar",
+  "archive_sha256": "d9f61bfd30fed3a3cc4d10e1cdaeb906ffc4005bfa2c59c06b4aeeede24027f1",
+  "started_at": "2026-11-04T15:07:43.552265+09:00",
+  "seed": 42,
+  "k_values": [
+    1,
+    3,
+    5,
+    7,
+    9,
+    11,
+    15,
+    21
+  ],
+  "metrics": [
+    "euclidean",
+    "manhattan",
+    "cosine"
+  ],
+  "folds": 5,
+  "train_images": 50000,
+  "test_images": 10000,
+  "features": 3072,
+  "train_class_counts": [
+    5000,
+    5000,
+    5000,
+    5000,
+    5000,
+    5000,
+    5000,
+    5000,
+    5000,
+    5000
+  ],
+  "test_class_counts": [
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000,
+    1000
+  ],
+  "device": "cuda:0",
+  "device_name": "NVIDIA RTX A5000",
+  "batch_size": 128,
+  "threads": 4,
+  "python": "3.10.20",
+  "numpy": "1.26.4",
+  "sklearn": "1.7.2",
+  "selection_rule": "highest mean CV accuracy; then smallest k; then metric name",
+  "command": "/home/msko20702/miniconda3/envs/dent-med3d/bin/python /home/msko20702/CV/knn_cifar10.py --device cuda:0",
+  "torch": "2.6.0+cu124",
+  "cuda_visible_devices": null,
+  "selected_model": {
+    "metric": "manhattan",
+    "k": 1,
+    "accuracy_mean": 0.37076,
+    "accuracy_std": 0.0019346834366376325,
+    "precision_macro_mean": 0.4164022979465278,
+    "precision_macro_std": 0.0031811004792346707,
+    "recall_macro_mean": 0.37076,
+    "recall_macro_std": 0.001934683436637609,
+    "f1_macro_mean": 0.3690287009175354,
+    "f1_macro_std": 0.0023207282258631357,
+    "accuracy_oof": 0.37076,
+    "precision_macro_oof": 0.41620744155857653,
+    "recall_macro_oof": 0.37076,
+    "f1_macro_oof": 0.3690432011648096
+  },
+  "per_metric_selected_k": {
+    "euclidean": 1,
+    "manhattan": 1,
+    "cosine": 1
+  },
+  "cv_elapsed_seconds": 74.73635439900681,
+  "elapsed_seconds": 94.27960316702956,
+  "test_results": [
+    {
+      "metric": "euclidean",
+      "k": 1,
+      "selected_by_cv": false,
+      "n_train": 50000,
+      "n_test": 10000,
+      "accuracy": 0.3539,
+      "precision_macro": 0.41122464684632654,
+      "recall_macro": 0.3539,
+      "f1_macro": 0.3494752122873106
+    },
+    {
+      "metric": "manhattan",
+      "k": 1,
+      "selected_by_cv": true,
+      "n_train": 50000,
+      "n_test": 10000,
+      "accuracy": 0.3859,
+      "precision_macro": 0.4332592068749969,
+      "recall_macro": 0.3859,
+      "f1_macro": 0.3862097794287935
+    },
+    {
+      "metric": "cosine",
+      "k": 1,
+      "selected_by_cv": false,
+      "n_train": 50000,
+      "n_test": 10000,
+      "accuracy": 0.3672,
+      "precision_macro": 0.4070141410701197,
+      "recall_macro": 0.3672,
+      "f1_macro": 0.3638546135966715
+    }
+  ]
+}

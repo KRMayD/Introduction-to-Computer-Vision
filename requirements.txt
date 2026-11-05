@@ -1,0 +1,7 @@
+# Versions installed in the original experiment environment (Python 3.10.20).
+numpy==1.26.4
+scipy==1.15.3
+scikit-learn==1.7.2
+matplotlib==3.10.9
+Pillow==12.3.0
+threadpoolctl==3.6.0
