@@ -18,4 +18,4 @@
 
 ![CV 성능 곡선](figures/03_cv_curves.png)
 
-[실행 코드](../../experiments/04_k101/run.py) · [실험 목록](../README.md)
+[실행 코드](../../experiment.py) · [실험 목록](../README.md)

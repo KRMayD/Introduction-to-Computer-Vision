@@ -6,6 +6,6 @@ k=5에서 동률은 **21.86%**, CV 정확도는 **36.30% → 37.85%**였습니�
 
 [동률 발생·성능 변화](tie_results.md) · [전체 fold 결과](fold_results.md) · [4개 CV 지표](cv_results.md)
 
-[실행 코드](../../experiments/02_tie_analysis/run.py) · [실험 목록](../README.md)
+[실행 코드](../../experiment.py) · [실험 목록](../README.md)
 
 ![동률 처리 분석](voting_tie_analysis.png)

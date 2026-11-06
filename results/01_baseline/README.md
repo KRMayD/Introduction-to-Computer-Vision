@@ -14,4 +14,4 @@
 
 ![CV 성능 곡선](cross_validation.png)
 
-[실행 코드](../../experiments/01_baseline/run.py) · [실험 목록](../README.md)
+[실행 코드](../../experiment.py) · [실험 목록](../README.md)

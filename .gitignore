@@ -1,6 +1,4 @@
 # Dataset archives and extracted CIFAR data
-/data/*
-!/data/README.md
 *.tar
 *.tar.gz
 *.tgz

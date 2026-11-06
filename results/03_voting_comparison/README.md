@@ -18,4 +18,4 @@
 
 ![CV 성능 곡선](figures/04_cv_voting_curves.png)
 
-[실행 코드](../../experiments/03_voting_comparison/run.py) · [실험 목록](../README.md)
+[실행 코드](../../experiment.py) · [실험 목록](../README.md)

@@ -1,4 +1,0 @@
--r requirements.txt
-# Optional; use a PyTorch build compatible with the visible CUDA device.
-# Original experiment: torch 2.6.0+cu124.
-torch==2.6.0
