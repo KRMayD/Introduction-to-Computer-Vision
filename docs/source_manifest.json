@@ -4,21 +4,27 @@
     "original": "knn_cifar10.py",
     "organized": "knn_cifar10/core.py",
     "original_sha256": "e426e0b7826c1485fec7d68091ae9a0ca99de57ab55d207f34cb623d901d0b33",
-    "organized_sha256": "ffb521e3fee5ce9e15a2634e1f7d5b94480500a1e8470b67762dda1c4fad5ad5"
+    "organized_sha256": "30d3900685a65427f65ad676529d813bc267270ca74624226a07ec16ef12dd24",
+    "organized_sha256_before_korean_comments": "ffb521e3fee5ce9e15a2634e1f7d5b94480500a1e8470b67762dda1c4fad5ad5",
+    "documentation_note": "Korean explanatory comments added on 2026-11-06; executable AST unchanged."
   },
   {
     "kind": "code",
     "original": "knn_weighted_experiment.py",
     "organized": "knn_cifar10/voting.py",
     "original_sha256": "e0a4bdbd1400dfc8c18c877d4c9e4e7c4ea7fc3d047d1929d68539fcb5892aff",
-    "organized_sha256": "abc5f545a2f9e87105734627acea5ef9c082a60e6f0ab5905228b76cc914a3f4"
+    "organized_sha256": "f6b9826cb99a71205cfc45d07cb94f33d9eb6563f00cebd580046a3f6e0950e3",
+    "organized_sha256_before_korean_comments": "abc5f545a2f9e87105734627acea5ef9c082a60e6f0ab5905228b76cc914a3f4",
+    "documentation_note": "Korean explanatory comments added on 2026-11-06; executable AST unchanged."
   },
   {
     "kind": "code",
     "original": "analyze_voting_ties.py",
     "organized": "knn_cifar10/tie_analysis.py",
     "original_sha256": "9f1ffa730b5d19f995b4e5444d52153c2210fc425dfe4ba2fc82745da4bd96d3",
-    "organized_sha256": "fc91ed79d3ab0da184d54eded166463227831484db6b23c71c62d444a0a45757"
+    "organized_sha256": "9d856f18ce8a7e43cc2623acd03d851857fbf67a340390869740d18c8e4ebeeb",
+    "organized_sha256_before_korean_comments": "fc91ed79d3ab0da184d54eded166463227831484db6b23c71c62d444a0a45757",
+    "documentation_note": "Korean explanatory comments added on 2026-11-06; executable AST unchanged."
   },
   {
     "kind": "code",

@@ -1,5 +1,8 @@
 """Exact, from-scratch KNN on every CIFAR-10 image; no package installation."""
 
+# 공통 구현: CIFAR-10 로드 → 거리 계산 → 최근접 이웃 선택 → 투표 → 지표 계산.
+# 이 파일의 run()은 기본 실험을 수행하고, voting.py도 아래 클래스·함수를 재사용한다.
+# 학습 데이터 x는 (이미지 수, 3072), 정답 y는 (이미지 수,) 형태의 배열이다.
 from __future__ import annotations
 
 import argparse
@@ -28,6 +31,7 @@ from sklearn.model_selection import StratifiedKFold
 from threadpoolctl import threadpool_limits
 
 
+# 클래스 번호는 아래 CLASS_NAMES 순서이며, 작은 번호로 동률을 푸는 기준도 이 순서다.
 METRICS = ("euclidean", "manhattan", "cosine")
 SCORES = ("accuracy", "precision_macro", "recall_macro", "f1_macro")
 DEFAULT_K = (1, 3, 5, 7, 9, 11, 15, 21)
@@ -42,6 +46,7 @@ def load_cifar10(archive: Path):
 
     CIFAR's Python format uses pickle: only load a trusted dataset archive.
     """
+    # 압축을 디스크에 풀지 않고 알려진 배치 파일만 읽는다. r:*는 tar/gzip을 자동 판별한다.
     with tarfile.open(archive, "r:*") as handle:
         def read_batch(name):
             member = handle.getmember(f"cifar-10-batches-py/{name}")
@@ -57,6 +62,7 @@ def load_cifar10(archive: Path):
                 raise ValueError(f"Unexpected CIFAR-10 batch shape/type: {name}")
             return x, y
 
+        # 학습 배치 5개를 합쳐 50,000장, 공식 테스트 배치 1개로 10,000장을 구성한다.
         batches = [read_batch(f"data_batch_{i}") for i in range(1, 6)]
         x_train = np.concatenate([x for x, _ in batches])
         y_train = np.concatenate([y for _, y in batches])
@@ -70,9 +76,12 @@ def load_cifar10(archive: Path):
 
 def majority_predictions(neighbor_labels, k_values, n_classes=10):
     """Uniform voting; a class vote tie selects the smallest class ID."""
+    # labels[i, j]: i번째 검증/테스트 이미지의 j번째로 가까운 이웃 클래스.
+    # 가까운 순서의 이웃을 하나씩 누적하면 여러 k의 결과를 한 번에 계산할 수 있다.
     labels = np.asarray(neighbor_labels, dtype=np.int64)
     if labels.ndim != 2 or max(k_values) > labels.shape[1]:
         raise ValueError("Not enough neighbors for the requested k values.")
+    # votes[i, c]는 i번째 이미지에서 클래스 c가 받은 표의 수다.
     votes = np.zeros((len(labels), n_classes), dtype=np.int32)
     rows = np.arange(len(labels))
     requested = set(k_values)
@@ -80,12 +89,15 @@ def majority_predictions(neighbor_labels, k_values, n_classes=10):
     for column in range(max(k_values)):
         votes[rows, labels[:, column]] += 1
         if column + 1 in requested:
+            # argmax는 최대값이 여러 개면 첫 위치를 반환하므로 작은 클래스 번호가 이긴다.
+            # copy()로 현재 k의 결과를 고정해 이후 누적 계산과 분리한다.
             predictions[column + 1] = votes.argmax(axis=1).copy()
     return predictions
 
 
 def nearest_tie_predictions(neighbor_labels, k_values, n_classes=10):
     """Uniform voting; choose the nearest neighbor in a tied winning class."""
+    # 표는 모두 1표다. 거리는 최다 득표 클래스끼리 동률일 때만 선택 기준으로 쓴다.
     labels = np.asarray(neighbor_labels, dtype=np.int64)
     votes = np.zeros((len(labels), n_classes), dtype=np.int32)
     rows = np.arange(len(labels))
@@ -94,8 +106,12 @@ def nearest_tie_predictions(neighbor_labels, k_values, n_classes=10):
         votes[rows, labels[:, column]] += 1
         k = column + 1
         if k in k_values:
+            # winners[i, c]는 클래스 c가 현재 최다 득표 후보인지 나타낸다.
+            # CIFAR-10은 다중 클래스이므로 홀수 k에서도 2:2:1 같은 동률이 생긴다.
             winners = votes == votes.max(axis=1, keepdims=True)
+            # 클래스별 후보 표시를 이웃 위치별 표시로 바꾼다. 후보가 아닌 이웃은 제외한다.
             winning_positions = np.take_along_axis(winners, labels[:, :k], axis=1)
+            # 이웃이 거리순이므로 첫 True가 동률 후보들 중 가장 가까운 이웃이다.
             predictions[k] = labels[rows, winning_positions.argmax(axis=1)].copy()
     return predictions
 
@@ -120,10 +136,13 @@ def distance_weighted_predictions(neighbor_labels, neighbor_distances, k_values,
         raise ValueError("Neighbors must be ordered by nondecreasing distance.")
     if np.any(labels < 0) or np.any(labels >= n_classes):
         raise ValueError("Neighbor class IDs are out of range.")
+    # 거리 0에서 1/d를 계산하지 않는다. 0거리 이웃이 있으면 그 이웃들만 1표씩 갖는다.
+    # 이웃은 거리순이므로 0거리 이웃은 앞쪽에 모여 있어 각 k에서도 같은 규칙이 적용된다.
     zero = distances == 0
     weights = np.divide(1.0, distances, out=np.zeros_like(distances), where=~zero)
     has_zero = zero.any(axis=1)
     weights[has_zero] = zero[has_zero]
+    # 이 방식의 votes는 표 개수가 아니라 클래스별 거리 역수의 누적 합이다.
     votes = np.zeros((len(labels), n_classes), dtype=np.float64)
     rows = np.arange(len(labels))
     predictions = {}
@@ -131,6 +150,7 @@ def distance_weighted_predictions(neighbor_labels, neighbor_distances, k_values,
         votes[rows, labels[:, column]] += weights[:, column]
         k = column + 1
         if k in k_values:
+            # 부동소수점 합의 작은 오차를 고려해 동률 후보를 정한 뒤 최근접 후보를 고른다.
             winners = np.isclose(votes, votes.max(axis=1, keepdims=True), rtol=1e-12, atol=0)
             winning_positions = np.take_along_axis(winners, labels[:, :k], axis=1)
             predictions[k] = labels[rows, winning_positions.argmax(axis=1)].copy()
@@ -147,6 +167,7 @@ class ExactKNN:
     """
 
     def __init__(self, k_values=DEFAULT_K, metrics=METRICS, device="cpu", batch_size=128):
+        # 최대 k까지 한 번 탐색한 이웃을 모든 요청 k에서 재사용한다.
         self.k_values = tuple(sorted(set(k_values)))
         self.metrics = tuple(metrics)
         self.device = device
@@ -159,6 +180,7 @@ class ExactKNN:
             raise ValueError("batch_size must be positive.")
 
     def fit(self, x, y):
+        # KNN의 fit은 가중치를 학습하지 않는다. 참조할 이미지·정답과 거리 계산용 값을 저장한다.
         x = np.asarray(x)
         self.y = np.asarray(y, dtype=np.int64)
         if x.ndim != 2 or self.y.shape != (len(x),):
@@ -169,14 +191,17 @@ class ExactKNN:
             raise ValueError("Features must be finite.")
         self.n_features = x.shape[1]
         self.n_classes = int(self.y.max()) + 1
+        # L2와 cosine은 내적·벡터 길이를 공유하고, L1은 절댓값 차이의 합을 사용한다.
         self.needs_dot = bool({"euclidean", "cosine"}.intersection(self.metrics))
         self.l1_exact_float32 = x.dtype == np.uint8
         if self.device.startswith("cuda"):
             import torch
             self.torch = torch
             self.x64 = torch.as_tensor(x, dtype=torch.float64, device=self.device) if self.needs_dot else None
+            # norm2는 각 학습 이미지 벡터의 제곱 길이 ||x||²다.
             self.norm2 = (self.x64 * self.x64).sum(1) if self.needs_dot else None
             self.norm = self.norm2.sqrt() if self.needs_dot else None
+            # uint8 픽셀의 L1 최대 합은 3072*255로 2**24보다 작아 float32에서도 정수로 정확하다.
             l1_dtype = torch.float32 if self.l1_exact_float32 else torch.float64
             self.x_l1 = torch.as_tensor(x, dtype=l1_dtype, device=self.device) if "manhattan" in self.metrics else None
         else:
@@ -187,6 +212,8 @@ class ExactKNN:
 
     def neighbor_labels(self, query, progress=None, return_distances=False):
         """Return sorted neighbor labels and, optionally, actual metric distances."""
+        # 반환 labels[거리]의 크기는 (질의 이미지 수, 최대 k)이며 가까운 이웃부터 저장한다.
+        # 거리 가중 투표를 할 때만 return_distances=True로 실제 거리도 함께 반환한다.
         query = np.asarray(query)
         if query.ndim != 2 or query.shape[1] != self.n_features:
             raise ValueError("Query features do not match the training features.")
@@ -199,6 +226,7 @@ class ExactKNN:
         if return_distances:
             distances = {metric: np.empty((len(query), max_k), dtype=np.float64) for metric in self.metrics}
         last_update = time.perf_counter()
+        # 모든 질의와 학습 데이터의 거리를 동시에 만들지 않고 질의를 배치로 나눠 메모리를 줄인다.
         for start in range(0, len(query), self.batch_size):
             stop = min(start + self.batch_size, len(query))
             if self.device.startswith("cuda"):
@@ -211,6 +239,7 @@ class ExactKNN:
                     distances[metric][start:stop] = batch_distances
                 else:
                     indices = result
+                # 거리 정렬로 얻은 학습 인덱스를 실제 클래스 번호로 변환한다.
                 labels[metric][start:stop] = self.y[indices]
             if progress and (time.perf_counter() - last_update >= 10 or stop == len(query)):
                 progress(stop, len(query))
@@ -221,6 +250,7 @@ class ExactKNN:
         torch = self.torch
         result = {}
         with torch.inference_mode():
+            # 경사 계산 없이 추론한다. dot의 크기는 (현재 질의 배치 수, 학습 이미지 수)다.
             if self.needs_dot:
                 q64 = torch.as_tensor(query, dtype=torch.float64, device=self.device)
                 q_norm2 = (q64 * q64).sum(1)
@@ -228,18 +258,23 @@ class ExactKNN:
             for metric in self.metrics:
                 if metric == "euclidean":
                     # sqrt is monotone, so squared L2 has identical neighbors.
+                    # ||q-x||² = ||q||² + ||x||² - 2(q·x). 음수 반올림 오차는 0으로 보정한다.
                     distance = (q_norm2[:, None] + self.norm2[None, :] - 2 * dot).clamp_min_(0)
                 elif metric == "cosine":
+                    # cosine distance = 1 - (q·x)/(||q|| ||x||). 작은 거리일수록 방향이 비슷하다.
                     denominator = q_norm2.sqrt()[:, None] * self.norm[None, :]
                     similarity = dot / denominator.clamp_min(torch.finfo(torch.float64).tiny)
                     distance = (1 - similarity.clamp(-1, 1)).clamp_min_(0)
                 else:
+                    # Manhattan distance = 각 픽셀 차이의 절댓값을 모두 더한 값.
                     q_l1 = torch.as_tensor(query, dtype=self.x_l1.dtype, device=self.device)
                     distance = torch.cdist(q_l1, self.x_l1, p=1)
+                # stable=True로 거리가 같을 때 기존 학습 인덱스 순서를 유지한다.
                 indices = torch.argsort(distance, dim=1, stable=True)[:, :max_k]
                 if return_distances:
                     selected_distances = torch.gather(distance, 1, indices)
                     if metric == "euclidean":
+                        # 이웃 순위는 제곱 거리로 구해도 되지만 1/d 가중치에는 실제 L2가 필요하다.
                         selected_distances = selected_distances.sqrt()
                     result[metric] = (indices.cpu().numpy(), selected_distances.cpu().numpy())
                 else:
@@ -247,6 +282,7 @@ class ExactKNN:
         return result
 
     def _cpu_indices(self, query, max_k, return_distances=False):
+        # GPU 경로와 동일한 거리 공식·안정 정렬을 NumPy/SciPy로 계산하는 CPU 경로다.
         from scipy.spatial.distance import cdist
         query = np.asarray(query, dtype=np.float64)
         result = {}
@@ -273,6 +309,7 @@ class ExactKNN:
         return result
 
     def predict_all(self, query, progress=None):
+        # 기본 실험용 예측: 각 거리에서 이웃을 한 번 찾고 일반 다수결을 모든 k에 적용한다.
         neighbors = self.neighbor_labels(query, progress)
         return {
             metric: majority_predictions(labels, self.k_values, self.n_classes)
@@ -281,6 +318,8 @@ class ExactKNN:
 
 
 def evaluate(y_true, y_pred):
+    # 10개 클래스의 P/R/F1을 각각 구한 뒤 동일 비중으로 평균한다(Macro).
+    # Macro F1은 평균 P와 평균 R로 다시 계산하는 값이 아니며, 정확도는 전체 정답 비율이다.
     precision, recall, f1, _ = precision_recall_fscore_support(
         y_true, y_pred, labels=np.arange(10), average="macro", zero_division=0,
     )
@@ -289,6 +328,7 @@ def evaluate(y_true, y_pred):
 
 
 def write_csv(path, rows):
+    # Excel 등에서도 한글·열 이름을 읽기 쉽도록 UTF-8 BOM을 포함해 저장한다.
     rows = list(rows)
     with path.open("w", newline="", encoding="utf-8-sig") as stream:
         writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
@@ -314,6 +354,7 @@ def resolve_device(requested, threads):
 
 
 def make_plots(output, summary, test_results, best, y_test, test_predictions):
+    # 저장된 지표와 예측으로 그래프·혼동행렬을 만든다. 여기서 모델을 다시 선택하지 않는다.
     os.environ.setdefault("MPLCONFIGDIR", str(output / ".mplconfig"))
     import matplotlib
     matplotlib.use("Agg")
@@ -458,6 +499,7 @@ Python {metadata['python']}, NumPy {metadata['numpy']}, scikit-learn {metadata['
 
 
 def run(args):
+    # 기본 실험 흐름: 전체 데이터 로드 → 5-fold CV → CV로 모델 선택 → 전체 학습 후 테스트.
     import sklearn
     start = time.perf_counter()
     started_at = datetime.now(ZoneInfo("Asia/Seoul")).isoformat()
@@ -476,6 +518,7 @@ def run(args):
     log(f"Device: {device} ({device_name}); CPU threads: {args.threads}")
     x_train, y_train, x_test, y_test = load_cifar10(archive)
     log(f"FULL DATA: train={x_train.shape}, test={x_test.shape}; k={args.k_values}")
+    # 데이터 해시와 실행 설정을 남겨 후속 실험이 동일 조건을 재현하는지 확인할 수 있게 한다.
     digest = hashlib.sha256()
     with archive.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
@@ -496,18 +539,23 @@ def run(args):
         metadata["cuda_visible_devices"] = os.environ.get("CUDA_VISIBLE_DEVICES")
     (output / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    # OOF(out-of-fold): 각 이미지가 학습에 포함되지 않은 fold에서 받은 검증 예측.
+    # -1은 아직 예측하지 않았다는 표시이며, 완료 시 모든 위치가 채워져야 한다.
     oof = {(metric, k): np.full(len(y_train), -1, dtype=np.int64) for metric in METRICS for k in args.k_values}
     fold_assignment = np.zeros(len(y_train), dtype=np.int8)
     rows = []
+    # 클래스 비율을 유지해 40,000장 학습 / 10,000장 검증을 다섯 번 수행한다.
     splitter = StratifiedKFold(n_splits=5, shuffle=True, random_state=args.seed)
     for fold, (train_index, valid_index) in enumerate(splitter.split(x_train, y_train), 1):
         log(f"Fold {fold}/5: train={len(train_index)}, validation={len(valid_index)}")
         fold_assignment[valid_index] = fold
+        # 현재 fold의 검증 이미지는 fit에 넣지 않아 자기 자신을 이웃으로 참조하지 않게 한다.
         classifier = ExactKNN(args.k_values, device=device, batch_size=args.batch_size).fit(x_train[train_index], y_train[train_index])
         predictions = classifier.predict_all(x_train[valid_index], lambda n, total: log(f"Fold {fold}: {n}/{total} queries"))
         for metric in METRICS:
             for k in args.k_values:
                 predicted = predictions[metric][k]
+                # 원래 이미지 인덱스 위치에 예측을 저장해 모든 fold를 올바르게 합친다.
                 oof[metric, k][valid_index] = predicted
                 rows.append(dict(fold=fold, metric=metric, k=k, n_train=len(train_index),
                                  n_valid=len(valid_index), **evaluate(y_train[valid_index], predicted)))
@@ -517,6 +565,7 @@ def run(args):
     if np.any(fold_assignment == 0) or any(np.any(pred < 0) for pred in oof.values()):
         raise RuntimeError("Incomplete out-of-fold coverage.")
 
+    # 같은 거리·k의 5개 지표를 모아 평균과 표본 표준편차(ddof=1)를 계산한다.
     summary = []
     for metric in METRICS:
         for k in args.k_values:
@@ -526,11 +575,14 @@ def run(args):
                 values = [row[score] for row in group]
                 record[f"{score}_mean"] = float(np.mean(values))
                 record[f"{score}_std"] = float(np.std(values, ddof=1))
+            # 통합 OOF 지표는 별도로 기록한다. 비선형인 Macro P/F1은 fold 평균과 다를 수 있다.
             record.update({f"{score}_oof": value for score, value in evaluate(y_train, oof[metric, k]).items()})
             summary.append(record)
     write_csv(output / "cv_summary.csv", summary)
     write_csv(output / "fold_assignments.csv", (dict(train_index=i, label=int(y_train[i]), validation_fold=int(fold_assignment[i])) for i in range(len(y_train))))
 
+    # min()을 쓰므로 정확도에 음수를 붙여 큰 정확도가 먼저 오게 한다.
+    # 정확도가 같을 때는 작은 k, 거리 이름 순으로 선택한다.
     selection_key = lambda row: (-row["accuracy_mean"], row["k"], row["metric"])
     best = min(summary, key=selection_key)
     winners = {metric: min([row for row in summary if row["metric"] == metric], key=selection_key) for metric in METRICS}
@@ -539,6 +591,7 @@ def run(args):
     # Persist selection before computing any test predictions.
     (output / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
     log(f"Selected using CV ONLY: {best['metric']}, k={best['k']}, accuracy={best['accuracy_mean']:.6f}")
+    # 테스트 예측 전에 선택 결과를 저장했다. 이제 학습 50,000장 전체를 참조 데이터로 사용한다.
     selected_ks = tuple(sorted({row["k"] for row in winners.values()}))
     classifier = ExactKNN(selected_ks, device=device, batch_size=args.batch_size).fit(x_train, y_train)
     final_all = classifier.predict_all(x_test, lambda n, total: log(f"Full-train official test: {n}/{total} queries"))
@@ -555,6 +608,7 @@ def run(args):
     per_class = classification_report(y_test, test_predictions[best["metric"]], labels=np.arange(10),
                                       target_names=CLASS_NAMES, output_dict=True, zero_division=0)
     write_csv(output / "classification_report.csv", [dict(class_name=name, **per_class[name]) for name in CLASS_NAMES])
+    # 후속 투표 비교에서 분할·기본 예측을 대조할 수 있게 원본 예측도 보관한다.
     np.savez_compressed(output / "predictions.npz", y_train=y_train, y_test=y_test, validation_fold=fold_assignment,
                         **{f"oof_{metric}_k{k}": pred for (metric, k), pred in oof.items()},
                         **{f"test_{metric}_k{winners[metric]['k']}": pred for metric, pred in test_predictions.items()})
@@ -568,6 +622,7 @@ def run(args):
 
 
 def main():
+    # 명령행 옵션을 읽고 값의 범위를 확인한 뒤 실험 본체 run()을 호출한다.
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, default=Path(__file__).resolve().parent.parent / "data" / "cifar-10-python.tar")
     parser.add_argument("--output", type=Path, help="New output directory; must not already exist.")

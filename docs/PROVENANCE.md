@@ -42,6 +42,8 @@ CSV·metadata.json·PNG **50개 파일**을 바이트 단위로 동일하게 복
 
 ## 해시와 검증
 
+2026-11-06에 핵심 구현과 실험 진입점에 한글 설명 주석을 추가했습니다. 수정 전후 8개 Python 파일의 AST를 비교해 실행 코드가 동일함을 확인했습니다. 원본 파일 해시는 유지하고, 수정된 공통 코드의 기존 사본 해시는 `organized_sha256_before_korean_comments`에 보관했습니다. `organized_sha256`은 현재 주석이 포함된 파일의 해시입니다. [코드 읽기 안내](CODE_WALKTHROUGH.ko.md)에 실행 흐름을 설명했습니다.
+
 [source_manifest.json](source_manifest.json)에 원본·정리된 상대 경로와 SHA-256을 기록했습니다. `python scripts/validate_repository.py`는 정리된 파일의 해시, CV 요약과 fold 값의 일치, 테스트 지표와 혼동행렬의 일치, 결과 표 행 수와 문서 링크를 확인합니다.
 
 metadata.json은 원본 실행 기록을 그대로 보존하므로 당시 머신의 로컬 경로가 포함됩니다. 재현할 때는 상위 README의 새 실행 명령과 자신의 데이터 경로를 사용합니다.
